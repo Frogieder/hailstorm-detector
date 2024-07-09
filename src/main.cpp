@@ -1,3 +1,4 @@
+
 // Current implementation for ATtiny402.
 // Scale is connected as follows:
 //      DT  -> PA6 / Arduino pin 0 / Physical pin 2
@@ -5,13 +6,13 @@
 // The output is on PA3 / Arduino pin 3 / Physical pin 7
 
 #include <Arduino.h>
-#include "Wire.h"
+//#include "Wire.h"
 #include "HX711.h"
 
-#define DIFF_THRESHOLD 200000
+#define DIFF_THRESHOLD 350000
 #define OUTPUT_PIN 4
-#define DT_PIN 0
-#define CLK_PIN 1
+#define DT_PIN 1
+#define CLK_PIN 0
 //#define OUTPUT_PIN 17
 //#define DT_PIN 2
 //#define CLK_PIN 3
@@ -60,7 +61,7 @@ HX711 scale;
 
 int32_t read_scale_blocking() {
     while (!scale.is_ready()) ;
-    return scale.read() + 8388607;
+    return scale.read() + 0x7FFFFF;
 }
 
 int32_t absolute(int32_t val) {
@@ -88,6 +89,9 @@ void setup() {
 //    scale.set_gain(64);
 //    Serial1.begin(115200);
     pinMode(OUTPUT_PIN, OUTPUT);
+    digitalWrite(OUTPUT_PIN, LOW);
+
+    // debug output interface
     pinMode(2, OUTPUT);
     pinMode(3, OUTPUT);
 
@@ -95,38 +99,47 @@ void setup() {
     get_new_data();
 }
 
+bool skip = false;
+
 void loop() {
 
     int32_t mean = sum / BUFFER_SIZE;
-
-
-//    int32_t val = mean;
-//    for (uint8_t i = 0; i < 32; i++)  {
-//        digitalWrite(2, val & 0x01), val >>= 1;
-//
-//        digitalWrite(3, HIGH);
-//        digitalWrite(3, LOW);
-//    }
 
     // read input
     int32_t a = read_scale_blocking();
 //    Serial1.printf("a: %li, mean: %li, diff: %li\n", a, mean);
 
-//    val = absolute(0x40000+mean);
-//    for (uint8_t i = 0; i < 32; i++)  {
-//        digitalWrite(2, val & 0x01), val >>= 1;
-//
-//        digitalWrite(3, HIGH);
-//        digitalWrite(3, LOW);
-//    }
+    int32_t val = mean;
+    for (uint8_t i = 0; i < 32; i++)  {
+        digitalWrite(2, val & 0x01), val >>= 1;
 
+        digitalWrite(3, HIGH);
+        digitalWrite(3, LOW);
+    }
+
+    delay(1);
+    val = absolute(a-mean);
+    for (uint8_t i = 0; i < 32; i++)  {
+        digitalWrite(2, val & 0x01), val >>= 1;
+
+        digitalWrite(3, HIGH);
+        digitalWrite(3, LOW);
+    }
+
+//    if (no_detection == 0 && absolute(mean - a) > DIFF_THRESHOLD) {
     if (absolute(mean - a) > DIFF_THRESHOLD) {
         pinMode(OUTPUT_PIN, INPUT_PULLUP);
-        while (digitalRead(OUTPUT_PIN));
+        delay(1000);
+        while (digitalReadFast(OUTPUT_PIN));
         pinMode(OUTPUT_PIN, OUTPUT);
         digitalWrite(OUTPUT_PIN, LOW);
+        get_new_data();
     }
-    sum -= buffer.pop();
-    sum += a;
-    buffer.push(a);
+
+    if (!skip) {
+        sum -= buffer.pop();
+        sum += a;
+        buffer.push(a);
+    }
+    skip = !skip;
 }

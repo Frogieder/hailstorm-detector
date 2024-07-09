@@ -6,9 +6,11 @@
 #include "Arduino.h"
 #include "HX711.h"
 
+#define OUTPUT_PIN 4
+
 #define POWER 5
 #define BUFFER_SIZE (1 << POWER)
-#define ACCEPTED_DIFF_POWER 3
+#define ACCEPTED_DIFF_MULTIPLIER 20
 
 HX711 scale;
 
@@ -53,15 +55,29 @@ private:
     size_t count;
 };
 
+void print(int32_t val) {
+    for (uint8_t i = 0; i < 32; i++)  {
+        digitalWrite(2, val & 0x01), val >>= 1;
+
+        digitalWrite(3, HIGH);
+        digitalWrite(3, LOW);
+    }
+}
+
+int32_t absolute(int32_t val) {
+    return val < 0 ? -val : val;
+}
+
 long sum;
 FixedQueue<int32_t, BUFFER_SIZE> buffer;
 
 void setup() {
-//    scale.begin(0, 1);
-    scale.begin(2, 3);
+    scale.begin(1, 0, 64);
+//    scale.begin(2, 3);
 //    scale.set_gain(64);
-    Serial1.begin(115200);
-    pinMode(17, OUTPUT);
+    pinMode(OUTPUT_PIN, OUTPUT);
+    pinMode(2, OUTPUT);
+    pinMode(3, OUTPUT);
 
     // Fill buffer with first data
     long a;
@@ -79,22 +95,26 @@ void loop() {
     long mean = sum >> POWER;
     long diffs_sum = 0;
     for (int i = 0; i < BUFFER_SIZE; i++) {
-        diffs_sum += abs(buffer[i] - mean);
+        diffs_sum += absolute(buffer[i] - mean);
     }
-    long accepted_diff = diffs_sum >> (POWER - ACCEPTED_DIFF_POWER);
+    long accepted_diff = (ACCEPTED_DIFF_MULTIPLIER*diffs_sum) >> (POWER);
 
     // read input
     long a = read_scale_blocking();
-    Serial1.printf("a: %li, mean: %li, accepted_diff: %li\n", a, mean, accepted_diff);
 
-    bool is_peak;
-    if (a > mean) {
-        is_peak = (mean + accepted_diff) < a;
+    print(mean);
+    delayMicroseconds(400);
+    print(accepted_diff);
+    delayMicroseconds(400);
+    print(absolute(a-mean));
+
+    if (absolute(a-mean) > accepted_diff) {
+        pinMode(OUTPUT_PIN, INPUT_PULLUP);
+        delay(1000);
+        while (digitalRead(OUTPUT_PIN));
+        pinMode(OUTPUT_PIN, OUTPUT);
+        digitalWrite(OUTPUT_PIN, LOW);
     }
-    else {
-        is_peak = (mean - accepted_diff) > a;
-    }
-    digitalWrite(17, is_peak);
     sum -= buffer.pop();
     sum += a;
     buffer.push(a);
