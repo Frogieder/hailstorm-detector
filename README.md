@@ -3,12 +3,13 @@
 This device connects ATtiny402 (and possibly other simmilar chips) to HX711 and a strain gauge to detect force spikes on the sensor, that is, when a hailstone hits the sensor.
 The intended design has a net mounted to a strain gauge so that water droplets fall through, while hailstones trigger the sensor.
 
-The connections look like this:
-* HX711 DT  -> PA6 / Arduino pin 0 / Physical pin 2
-* HX711 SCK -> PA7 / Arduino pin 1 / Physical pin 3
-* The output is on PA3 / Arduino pin 3 / Physical pin 7
+The default connections are:
+* HX711 SCK -> PA6 / Arduino pin 0 / Physical pin 2
+* HX711 DT  -> PA7 / Arduino pin 1 / Physical pin 3
+* The output is on PA3 / Arduino pin 4 / Physical pin 7
+The pins may be switched as needed
 
-HX711 is MODIFIED from factory default, the 0R has to be moved, so that the chip operates at 80 SPS (although my experiments showed it running at around 89 SPS instead).
+HX711 is MODIFIED from factory default, the 0R resistor has to be moved, so that the chip operates at 80 SPS (although my experiments showed it running at around 89 SPS instead).
 
 ## Usage
 Connect the output pin to your host microcontroller. When nothing is detected, the output is low.
