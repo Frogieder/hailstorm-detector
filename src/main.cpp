@@ -13,6 +13,8 @@
 #define OUTPUT_PIN 4
 #define DT_PIN 1
 #define CLK_PIN 0
+#define DEBUG_DT 2
+#define DEBUG_CLK 3
 //#define OUTPUT_PIN 17
 //#define DT_PIN 2
 //#define CLK_PIN 3
@@ -92,8 +94,8 @@ void setup() {
     digitalWrite(OUTPUT_PIN, LOW);
 
     // debug output interface
-    pinMode(2, OUTPUT);
-    pinMode(3, OUTPUT);
+    pinMode(DEBUG_DT, OUTPUT);
+    pinMode(DEBUG_CLK, OUTPUT);
 
     // Fill buffer with first data
     get_new_data();
@@ -111,19 +113,19 @@ void loop() {
 
     int32_t val = mean;
     for (uint8_t i = 0; i < 32; i++)  {
-        digitalWrite(2, val & 0x01), val >>= 1;
+        digitalWrite(DEBUG_DT, val & 0x01), val >>= 1;
 
-        digitalWrite(3, HIGH);
-        digitalWrite(3, LOW);
+        digitalWrite(DEBUG_CLK, HIGH);
+        digitalWrite(DEBUG_CLK, LOW);
     }
 
     delay(1);
     val = absolute(a-mean);
     for (uint8_t i = 0; i < 32; i++)  {
-        digitalWrite(2, val & 0x01), val >>= 1;
+        digitalWrite(DEBUG_DT, val & 0x01), val >>= 1;
 
-        digitalWrite(3, HIGH);
-        digitalWrite(3, LOW);
+        digitalWrite(DEBUG_CLK, HIGH);
+        digitalWrite(DEBUG_CLK, LOW);
     }
 
 //    if (no_detection == 0 && absolute(mean - a) > DIFF_THRESHOLD) {
